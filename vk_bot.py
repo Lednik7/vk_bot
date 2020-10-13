@@ -17,7 +17,7 @@ vk = vk_session.get_api()
 
 def mention(): #получем строку с пользователями беседы
     members = vk.messages.getConversationMembers(
-            peer_id=2000000001,
+            peer_id=int(f"200000000{chat_id}"),
         )
 
     members_ids = [member['member_id'] for member in members['items'] if member['member_id'] > 0]
@@ -90,6 +90,11 @@ def run_programm(tasks): #запускает программу
                 thread2 = myThread(total_seconds + 1800, task, 1)
                 thread1.start()
                 thread2.start()
+
+            elif (total_seconds + 1800) >= 0:
+                tasks_to_run.append(task)
+                thread1 = myThread(total_seconds + 1800, task, 1)
+                thread1.start()
 
 for event in longpoll.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
