@@ -5,7 +5,7 @@ import threading
 import datetime
 import time
 
-chat_id = -1
+chat_id = 2
 
 token = '4adbcb234ad29a3f780711d2803a7b3532a791dfedd0ba369a27a854b97127179e7b236ce961ffe5d2' + '440'
 vk_session = vk_api.VkApi(token=token)
