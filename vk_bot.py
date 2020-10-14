@@ -30,8 +30,7 @@ def mention(peer_id): #получем строку с пользователям
 
 tasks = [
          ["Меташкола", "2020.10.18", "19.30", "физика"],
-         ["Меташкола", "2020.10.27", "19.30", "математика"],
-         ["Меташкола", "2020.10.13", "19.30", "Программирование"]
+         ["Меташкола", "2020.10.27", "19.30", "математика"]
 ]
 
 tasks_to_run = []
@@ -97,41 +96,43 @@ def run_programm(tasks): #запускает программу
 
 for event in longpoll.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
-        s = str(event.object.text).lower().strip()
-        if "on" in s:
-            try:
-                chat_id.add((event.chat_id, event.obj['peer_id']))
-                run_programm(tasks)
-                if event.from_chat:
+        if event.from_chat:
+            s = str(event.object.text).lower().strip()
+            if "on" in s:
+                try:
+                    chat_id.add((event.chat_id, event.obj['peer_id']))
+                    run_programm(tasks)
                     vk_send('Настройка выполнена', id=event.chat_id)
-            except Exception as e:
-                print(e)
-                if event.from_chat:
+                except Exception as e:
+                    print(e)
                     vk_send('Ошибка в программе', id=event.chat_id)
-                
-        elif "add" in s:
-            try:
-                tasks.append(add(s))
-                tasks.sort(key=lambda x: x[1] + x[2])
-                run_programm(tasks)
-                if event.from_chat:
+                    
+            elif "add" in s:
+                try:
+                    tasks.append(add(s))
+                    tasks.sort(key=lambda x: x[1] + x[2])
+                    run_programm(tasks)
                     vk_send('Олимпиада добавлена', id=event.chat_id)
-            except Exception as e:
-                print(e)
-                if event.from_chat:
+                except Exception as e:
+                    print(e)
                     vk_send('Формат данных неправильный', id=event.chat_id)
-        
-        elif "off" in s:
-            try:
-                chat_id -= set([(event.chat_id, event.obj['peer_id'])])
-                if event.from_chat:
+            
+            elif "off" in s:
+                try:
+                    chat_id -= set([(event.chat_id, event.obj['peer_id'])])
                     vk_send('Настройка отменена', id=event.chat_id)
-            except Exception as e:
-                print(e)
-                if event.from_chat:
+                except Exception as e:
+                    print(e)
                     vk_send('Ошибка в программе', id=event.chat_id)
-                
-        elif "data" in s:
-            print(chat_id)
-            print(tasks)
-            print(tasks_to_run)
+                    
+            elif "pattern" in s:
+                try:
+                    vk_send('@add меташкола 14.10.2020 19.36 физика', id=event.chat_id)
+                except Exception as e:
+                    print(e)
+                    vk_send('Ошибка в программе', id=event.chat_id)
+
+            elif "data" in s:
+                print(chat_id)
+                print(tasks)
+                print(tasks_to_run)
