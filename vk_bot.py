@@ -1,11 +1,10 @@
 import random, vk_api, vk
 from vk_api.utils import get_random_id
-from threading import Thread
 import threading
 import datetime
 import time
 
-chat_id = 2
+chat_id = set()
 
 token = '4adbcb234ad29a3f780711d2803a7b3532a791dfedd0ba369a27a854b97127179e7b236ce961ffe5d2' + '440'
 vk_session = vk_api.VkApi(token=token)
@@ -15,9 +14,9 @@ from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 longpoll = VkBotLongPoll(vk_session, 199420763)
 vk = vk_session.get_api()
 
-def mention(): #получем строку с пользователями беседы
+def mention(peer_id): #получем строку с пользователями беседы
     members = vk.messages.getConversationMembers(
-            peer_id=int(f"200000000{chat_id}"),
+            peer_id=peer_id,
         )
 
     members_ids = [member['member_id'] for member in members['items'] if member['member_id'] > 0]
@@ -48,27 +47,29 @@ def get_seconds(task): #получаем кол-во секунд до даты
     seconds = round(date.total_seconds())
     return seconds
 
-def vk_send(s): #отправляем сообщение через vk
+def vk_send(s, id): #отправляем сообщение через vk
     vk.messages.send(
         key = ('d978ad9160e7ff4b18057daf93f41acd1c94e4c2'),
         server = ('https://lp.vk.com/wh199420763'),
         ts = ('23'),
         random_id = get_random_id(),
         message = s,
-        chat_id = chat_id,
+        chat_id = id,
         )
 
 def send_message(total_seconds, task, t): #отправка шаблона сообщения
     time.sleep(total_seconds)
-    if t == 0:
-        s = f'{mention()}сегодня олимпиада {task[0]} по предмету: {task[3]}'
-    else:
-        s = f'{mention()}Олимпиада по предмету: {task[3]} - началась!'
-
-    vk_send(s)
+    for element, peer_id in chat_id:
+        if t == 0:
+            s = f'{mention(peer_id)}сегодня олимпиада {task[0]} по предмету: {task[3]}'
+        elif t == 1:
+            s = f'{mention(peer_id)}Олимпиада по предмету: {task[3]} - началась!'
+        vk_send(s, element)
 
 def add(s):
-    return s.strip().split()[3:]
+    temp = s.strip().split()[1:]
+    temp[1] = '.'.join(temp[1].split(".")[::-1])
+    return temp
     
 class myThread(threading.Thread): #отправляем уведомление в поток
     def __init__(self, total_seconds, task, n):
@@ -86,38 +87,51 @@ def run_programm(tasks): #запускает программу
             total_seconds = get_seconds(task)
             if total_seconds >= 0:
                 tasks_to_run.append(task)
-                thread1 = myThread(total_seconds, task, 0)
-                thread2 = myThread(total_seconds + 1800, task, 1)
-                thread1.start()
-                thread2.start()
+                for thread in [myThread(total_seconds, task, 0), myThread(total_seconds+1800, task, 1)]:
+                    thread.start()
 
             elif (total_seconds + 1800) >= 0:
                 tasks_to_run.append(task)
-                thread1 = myThread(total_seconds + 1800, task, 1)
-                thread1.start()
+                thread = myThread(total_seconds + 1800, task, 1)
+                thread.start()
 
 for event in longpoll.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
         s = str(event.object.text).lower().strip()
-        if "настройка" in s:
-            chat_id = event.chat_id
-            run_programm(tasks)
-            print(event.chat_id)
-            if event.from_chat:
-                vk_send('Настройка выполнена')
+        if "on" in s:
+            try:
+                chat_id.add((event.chat_id, event.obj['peer_id']))
+                run_programm(tasks)
+                if event.from_chat:
+                    vk_send('Настройка выполнена', id=event.chat_id)
+            except Exception as e:
+                print(e)
+                if event.from_chat:
+                    vk_send('Ошибка в программе', id=event.chat_id)
                 
-        elif "добавить" in s:
-            print(event.chat_id)
+        elif "add" in s:
             try:
                 tasks.append(add(s))
                 tasks.sort(key=lambda x: x[1] + x[2])
                 run_programm(tasks)
                 if event.from_chat:
-                    vk_send('Олимпиада добавлена')
-            except:
+                    vk_send('Олимпиада добавлена', id=event.chat_id)
+            except Exception as e:
+                print(e)
                 if event.from_chat:
-                    vk_send('Формат данных неправильный')
+                    vk_send('Формат данных неправильный', id=event.chat_id)
+        
+        elif "off" in s:
+            try:
+                chat_id -= set([(event.chat_id, event.obj['peer_id'])])
+                if event.from_chat:
+                    vk_send('Настройка отменена', id=event.chat_id)
+            except Exception as e:
+                print(e)
+                if event.from_chat:
+                    vk_send('Ошибка в программе', id=event.chat_id)
                 
-        elif "данные" in s:
+        elif "data" in s:
+            print(chat_id)
             print(tasks)
             print(tasks_to_run)
