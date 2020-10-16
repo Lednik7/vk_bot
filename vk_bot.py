@@ -4,7 +4,7 @@ import threading
 import datetime
 import time
 
-chat_id = set()
+chat_id = set([(2, 2000000002), (3, 2000000003)])
 
 token = '4adbcb234ad29a3f780711d2803a7b3532a791dfedd0ba369a27a854b97127179e7b236ce961ffe5d2' + '440'
 vk_session = vk_api.VkApi(token=token)
@@ -94,45 +94,51 @@ def run_programm(tasks): #запускает программу
                 thread = myThread(total_seconds + 1800, task, 1)
                 thread.start()
 
-for event in longpoll.listen():
-    if event.type == VkBotEventType.MESSAGE_NEW:
-        if event.from_chat:
-            s = str(event.object.text).lower().strip()
-            if "on" in s:
-                try:
-                    chat_id.add((event.chat_id, event.obj['peer_id']))
-                    run_programm(tasks)
-                    vk_send('Настройка выполнена', id=event.chat_id)
-                except Exception as e:
-                    print(e)
-                    vk_send('Ошибка в программе', id=event.chat_id)
+while True:
+    try:
+        for event in longpoll.listen():
+            if event.type == VkBotEventType.MESSAGE_NEW:
+                if event.from_chat:
+                    s = str(event.object.text).lower().strip()
+                    if "on" in s:
+                        try:
+                            chat_id.add((event.chat_id, event.obj['peer_id']))
+                            run_programm(tasks)
+                            vk_send('Настройка выполнена', id=event.chat_id)
+                        except Exception as e:
+                            print(e)
+                            vk_send('Ошибка в программе', id=event.chat_id)
+                            
+                    elif "add" in s:
+                        try:
+                            tasks.append(add(s))
+                            tasks.sort(key=lambda x: x[1] + x[2])
+                            run_programm(tasks)
+                            vk_send('Олимпиада добавлена', id=event.chat_id)
+                        except Exception as e:
+                            print(e)
+                            vk_send('Формат данных неправильный', id=event.chat_id)
                     
-            elif "add" in s:
-                try:
-                    tasks.append(add(s))
-                    tasks.sort(key=lambda x: x[1] + x[2])
-                    run_programm(tasks)
-                    vk_send('Олимпиада добавлена', id=event.chat_id)
-                except Exception as e:
-                    print(e)
-                    vk_send('Формат данных неправильный', id=event.chat_id)
-            
-            elif "off" in s:
-                try:
-                    chat_id -= set([(event.chat_id, event.obj['peer_id'])])
-                    vk_send('Настройка отменена', id=event.chat_id)
-                except Exception as e:
-                    print(e)
-                    vk_send('Ошибка в программе', id=event.chat_id)
-                    
-            elif "pattern" in s:
-                try:
-                    vk_send('@add меташкола 14.10.2020 19.36 физика', id=event.chat_id)
-                except Exception as e:
-                    print(e)
-                    vk_send('Ошибка в программе', id=event.chat_id)
+                    elif "off" in s:
+                        try:
+                            chat_id -= set([(event.chat_id, event.obj['peer_id'])])
+                            vk_send('Настройка отменена', id=event.chat_id)
+                        except Exception as e:
+                            print(e)
+                            vk_send('Ошибка в программе', id=event.chat_id)
+                            
+                    elif "pattern" in s:
+                        try:
+                            vk_send('@add меташкола 14.10.2020 19.36 физика', id=event.chat_id)
+                        except Exception as e:
+                            print(e)
+                            vk_send('Ошибка в программе', id=event.chat_id)
 
-            elif "data" in s:
-                print(chat_id)
-                print(tasks)
-                print(tasks_to_run)
+                    elif "data" in s:
+                        print(chat_id)
+                        print(tasks)
+                        print(tasks_to_run)
+
+    except requests.exceptions.ReadTimeout:
+        print(f"Переподключение к серверам ВК: {datetime.datetime.now()}")
+        time.sleep(3)
