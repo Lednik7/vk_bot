@@ -1,5 +1,6 @@
 import random, vk_api, vk
 from vk_api.utils import get_random_id
+import requests
 import threading
 import datetime
 import time
@@ -11,7 +12,16 @@ vk_session = vk_api.VkApi(token=token)
 
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
-longpoll = VkBotLongPoll(vk_session, 199420763)
+class MyVkLongPoll(VkBotLongPoll):
+    def listen(self):
+        while True:
+            try: 
+                for event in self.check():
+                    yield event
+            except Exception as e:
+                print(f"Переподключение к серверам ВК")
+
+longpoll = MyVkLongPoll(vk_session, 199420763)
 vk = vk_session.get_api()
 
 def mention(peer_id): #получем строку с пользователями беседы
@@ -111,10 +121,13 @@ while True:
                             
                     elif "add" in s:
                         try:
-                            tasks.append(add(s))
-                            tasks.sort(key=lambda x: x[1] + x[2])
-                            run_programm(tasks)
-                            vk_send('Олимпиада добавлена', id=event.chat_id)
+                            if (len(add(s)) == 4) and (to_date(add(s)[1])) and (to_date(add(s)[2])):
+                                tasks.append(add(s))
+                                tasks.sort(key=lambda x: x[1] + x[2])
+                                run_programm(tasks)
+                                vk_send('Олимпиада добавлена', id=event.chat_id)
+                            else:
+                                vk_send('Формат данных неправильный', id=event.chat_id)
                         except Exception as e:
                             print(e)
                             vk_send('Формат данных неправильный', id=event.chat_id)
@@ -139,6 +152,6 @@ while True:
                         print(tasks)
                         print(tasks_to_run)
 
-    except requests.exceptions.ReadTimeout:
+    except:
         print(f"Переподключение к серверам ВК: {datetime.datetime.now()}")
         time.sleep(3)
